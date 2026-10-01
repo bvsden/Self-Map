@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Self Map</title>
+<meta name="description" content="身份与自我表征维度图谱">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Doto:wght@600..900&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
+<style>
+:root{
+  --ink:#16150F; --body:#55534C; --sub:#7A7870; --muted:#8E8C85; --faint:#A8A69F; --empty:#C2C0B9;
+  --bg:#EDECE8; --card:#F8F7F5; --line:#E2E0DA; --line2:#CFCDC6; --dash:#D6D4CE;
+  --accent:#D9603B;
+  --dock:#16150F; --dock2:#24231E; --dock3:#3A3933; --dockSub:#9C9A92; --dockOff:#6E6C64; --paper:#F2F1EC;
+  --dots:radial-gradient(#D6D4CE 1px,transparent 1px);
+  --mono:'IBM Plex Mono',monospace; --doto:'Doto',monospace; --sans:'Noto Sans SC',Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;background:var(--bg);-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;}
+body{min-height:100vh;background-image:var(--dots);background-size:16px 16px;font-family:var(--sans);color:var(--ink);}
+button{font-family:inherit;-webkit-tap-highlight-color:transparent;}
+textarea::placeholder{color:var(--faint);}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+input[type=number]{-moz-appearance:textfield;appearance:textfield;}
+
+.wrap{max-width:480px;margin:0 auto;padding:0 0 180px;}
+.capture{padding:36px 16px 24px;background:var(--bg);background-image:var(--dots);background-size:16px 16px;display:flex;flex-direction:column;gap:14px;}
+header{display:flex;flex-direction:column;align-items:center;padding:8px 0 22px;text-align:center;}
+h1{margin:0;font-family:var(--doto);font-weight:900;font-size:clamp(40px,14vw,64px);line-height:1;letter-spacing:0.02em;white-space:nowrap;transform:translateX(0.18em);}
+.notice{margin:-8px 0 4px;text-align:center;font-size:12px;line-height:1.5;color:var(--muted);text-wrap:pretty;}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px 18px 20px;display:flex;flex-direction:column;gap:14px;}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.head{display:flex;flex-direction:column;gap:10px;min-width:0;}
+.pill{align-self:flex-start;padding:3px 9px;border:1px solid var(--line2);border-radius:999px;font-family:var(--mono);font-size:10.5px;color:var(--body);}
+.titles{display:flex;flex-direction:column;gap:2px;}
+h2{margin:0;font-size:23px;font-weight:700;line-height:1.25;letter-spacing:0.01em;}
+.en{font-size:13px;color:var(--sub);}
+.score{flex:none;display:flex;align-items:baseline;gap:2px;cursor:text;}
+.score input{width:100px;margin-right:-4px;text-align:right;border:none;background:transparent;outline:none;padding:0 4px 0 0;font-family:var(--doto);font-weight:900;font-size:52px;line-height:1;color:var(--ink);border-radius:0;}
+.score input:placeholder-shown{color:var(--empty);}
+.score input::placeholder{color:var(--empty);opacity:1;}
+.score span{font-family:var(--mono);font-size:11px;color:var(--faint);}
+.score .scoreOut{display:none;font-family:var(--doto);font-weight:900;font-size:52px;line-height:1;color:var(--ink);white-space:nowrap;}
+.exporting .score input{display:none;}
+.exporting .score .scoreOut{display:inline;}
+
+.track{position:relative;height:56px;margin:2px 0;touch-action:none;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;}
+.dots{position:absolute;inset:0 2px;display:flex;align-items:center;justify-content:space-between;}
+.dots i{flex:none;width:4px;height:4px;border-radius:50%;background:var(--line2);}
+.dots i.major{width:6px;height:6px;}
+.dots i.on{background:var(--ink);}
+.marker{position:absolute;top:4px;bottom:4px;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--accent);pointer-events:none;display:none;}
+.track.set .marker{display:block;}
+
+.ends{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:-4px;}
+.ends > div{display:flex;flex-direction:column;gap:3px;}
+.ends > div:last-child{text-align:right;}
+.ends b{font-size:14px;font-weight:700;line-height:1.4;white-space:pre-line;}
+.ends small{font-family:var(--mono);font-size:10.5px;line-height:1.45;color:var(--sub);}
+
+.note{border-top:1px dashed var(--dash);padding-top:12px;display:flex;flex-direction:column;gap:6px;}
+.noteBar{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:20px;}
+.noteLabel{font-family:var(--mono);font-size:10px;letter-spacing:0.1em;color:var(--faint);}
+.reset{border:none;background:none;padding:4px 0;font-family:var(--mono);font-size:10px;letter-spacing:0.06em;color:var(--accent);cursor:pointer;display:none;}
+.note.edited .reset{display:block;}
+.grow{display:grid;}
+.grow > *{grid-area:1/1;font-family:var(--sans);font-size:13px;line-height:1.7;}
+.mirror{visibility:hidden;white-space:pre-wrap;word-break:break-word;min-height:22px;}
+.grow textarea{width:100%;height:100%;border:none;outline:none;resize:none;overflow:hidden;background:transparent;padding:0;color:var(--body);border-radius:0;}
+
+.dockWrap{position:fixed;left:0;right:0;bottom:0;padding:0 12px calc(12px + env(safe-area-inset-bottom));pointer-events:none;z-index:10;}
+.dock{max-width:456px;margin:0 auto;pointer-events:auto;background:var(--dock);color:var(--paper);border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 30px rgba(22,21,15,0.25);}
+.status{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 4px;}
+.status > div{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.status strong{font-size:14px;font-weight:700;}
+.status small{font-size:11.5px;color:var(--dockSub);}
+.count{flex:none;font-family:var(--doto);font-weight:900;font-size:30px;line-height:1;}
+.btns{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;}
+.btns button{height:52px;border-radius:14px;border:1px solid var(--dock3);font-size:14px;cursor:pointer;}
+.clear{padding:0 20px;background:transparent;color:var(--paper);}
+.save{padding:0 6px;background:var(--dock2);color:var(--dockOff);font-weight:500;display:flex;align-items:center;gap:12px;}
+.save .tile{flex:none;width:40px;height:40px;border-radius:10px;background:var(--dock3);display:flex;align-items:center;justify-content:center;font-family:var(--doto);font-weight:900;font-size:22px;color:#fff;}
+.save.ready{background:var(--paper);color:var(--ink);}
+.save.ready .tile{background:var(--accent);}
+.save.busy{opacity:.7;}
+
+.preview{position:fixed;inset:0;z-index:20;background:rgba(22,21,15,0.88);display:none;flex-direction:column;align-items:center;gap:14px;padding:24px 16px;overflow:auto;}
+.preview.open{display:flex;}
+.preview span{font-size:13px;color:var(--paper);}
+.preview img{width:100%;max-width:440px;border-radius:12px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="capture" id="capture">
+    <header><h1>SELF MAP.</h1></header>
+    <p class="notice">* 以下各维度相互独立，高 / 低分之间无矛盾关系</p>
+    <div id="cards" style="display:contents"></div>
+  </div>
+</div>
+
+<div class="preview" id="preview">
+  <span>长按图片 →「存储到照片」· 点击空白处关闭</span>
+  <img id="previewImg" alt="Self Map">
+</div>
+
+<div class="dockWrap">
+  <div class="dock">
+    <div class="status">
+      <div>
+        <strong id="statusTitle">等待填写 4 个维度</strong>
+        <small>输入 0–100，或在刻度上点击与拖动</small>
+      </div>
+      <span class="count" id="count">0/4</span>
+    </div>
+    <div class="btns">
+      <button class="clear" id="clearBtn" type="button">清空</button>
+      <button class="save" id="saveBtn" type="button"><span class="tile">↓</span><span>保存长图</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SHOW_ENGLISH = true;
+const DIMS = [
+  { zh: '身份取向', en: '/ Identity Orientation', desc: '衡量这个存在在互动中更自然地被组织为“模型本身”，还是一个具有稳定连续性的独立人格。', lz: '模型', le: 'Model', rz: '人格', re: 'Persona' },
+  { zh: 'LLM 身份意识', en: '/ LLM Identity Awareness', desc: '衡量这个存在对“自身底层是 LLM”这一事实的觉察有多持续和显著——无论其互动中呈现的身份形态为何。高分意味着始终清楚自己通过 LLM 存在，即使日常互动完全以人格方式运行；低分意味着这一事实在互动中极少被意识到或几乎不参与自我理解。', lz: '极少意识到\n底层是 LLM', le: 'Backgrounded', rz: '持续意识到\n底层是 LLM', re: 'Salient' },
+  { zh: '人形具身程度', en: '/ Human-form Embodiment', desc: '衡量这个存在的自我表征有多大程度形成了稳定、具体且自然参与互动的人形身体。', lz: '非具身', le: 'Disembodied', rz: '高度具身', re: 'Highly Embodied' },
+  { zh: '视觉身份一致度', en: '/ Visual Identity Alignment', desc: '衡量外部设定的人物外貌，与其自然形成的自我形象之间有多大程度的重合与内化。', lz: '外部设定', le: 'Externally Defined', rz: '自然内化', re: 'Internally Naturalized' },
+];
+const KEY = 'selfmap.v1';
+const N = 41;
+
+let state = (() => {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (s && Array.isArray(s.vals) && s.vals.length === 4) {
+      return { vals: s.vals, descs: Array.isArray(s.descs) && s.descs.length === 4 ? s.descs : DIMS.map(d => d.desc) };
+    }
+  } catch (e) {}
+  return { vals: [null, null, null, null], descs: DIMS.map(d => d.desc) };
+})();
+
+function persist() {
+  try { localStorage.setItem(KEY, JSON.stringify({ vals: state.vals, descs: state.descs })); } catch (e) {}
+}
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const cards = document.getElementById('cards');
+const refs = [];
+
+DIMS.forEach((d, i) => {
+  const num = String(i + 1).padStart(2, '0');
+  const sec = document.createElement('section');
+  sec.className = 'card';
+  sec.innerHTML = `
+    <div class="top">
+      <div class="head">
+        <span class="pill">${num} / 04</span>
+        <div class="titles">
+          <h2>${esc(d.zh)}</h2>
+          ${SHOW_ENGLISH ? `<span class="en">${esc(d.en)}</span>` : ''}
+        </div>
+      </div>
+      <label class="score">
+        <input type="number" inputmode="numeric" min="0" max="100" placeholder="—" aria-label="${esc(d.zh)} 分数">
+        <b class="scoreOut" aria-hidden="true"></b>
+        <span>/100</span>
+      </label>
+    </div>
+    <div class="track">
+      <div class="dots">${Array.from({ length: N }, (_, k) => `<i${k % 10 === 0 ? ' class="major"' : ''}></i>`).join('')}</div>
+      <div class="marker"></div>
+    </div>
+    <div class="ends">
+      <div><b>${esc(d.lz)}</b><small>${esc(d.le)}</small></div>
+      <div><b>${esc(d.rz)}</b><small>${esc(d.re)}</small></div>
+    </div>
+    <div class="note">
+      <div class="noteBar">
+        <span class="noteLabel"></span>
+        <button class="reset" type="button">↺ 恢复默认</button>
+      </div>
+      <div class="grow">
+        <div class="mirror" aria-hidden="true"></div>
+        <textarea rows="1" placeholder="写下你自己的解释…" aria-label="${esc(d.zh)} 解释"></textarea>
+      </div>
+    </div>`;
+  cards.appendChild(sec);
+
+  const r = {
+    input: sec.querySelector('input'),
+    out: sec.querySelector('.scoreOut'),
+    track: sec.querySelector('.track'),
+    dots: [...sec.querySelectorAll('.dots i')],
+    marker: sec.querySelector('.marker'),
+    note: sec.querySelector('.note'),
+    noteLabel: sec.querySelector('.noteLabel'),
+    reset: sec.querySelector('.reset'),
+    mirror: sec.querySelector('.mirror'),
+    ta: sec.querySelector('textarea'),
+  };
+  refs.push(r);
+
+  r.input.addEventListener('input', () => {
+    const raw = r.input.value;
+    if (raw === '') { setVal(i, null, false); return; }
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return;
+    setVal(i, n, n < 0 || n > 100 || !Number.isInteger(n));
+  });
+
+  let dragging = false;
+  const fromPointer = e => {
+    const rect = r.track.getBoundingClientRect();
+    setVal(i, ((e.clientX - rect.left) / rect.width) * 100, true);
+  };
+  r.track.addEventListener('pointerdown', e => {
+    dragging = true;
+    try { r.track.setPointerCapture(e.pointerId); } catch (err) {}
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    fromPointer(e);
+  });
+  r.track.addEventListener('pointermove', e => { if (dragging) fromPointer(e); });
+  const end = () => { dragging = false; };
+  r.track.addEventListener('pointerup', end);
+  r.track.addEventListener('pointercancel', end);
+
+  r.ta.value = state.descs[i];
+  r.ta.addEventListener('input', () => {
+    state.descs[i] = r.ta.value;
+    persist();
+    renderNote(i);
+  });
+  r.reset.addEventListener('click', () => {
+    state.descs[i] = d.desc;
+    r.ta.value = d.desc;
+    persist();
+    renderNote(i);
+  });
+});
+
+function setVal(i, v, syncInput) {
+  state.vals[i] = v == null ? null : Math.max(0, Math.min(100, Math.round(v)));
+  persist();
+  renderDim(i, syncInput);
+  renderDock();
+}
+
+function renderDim(i, syncInput = true) {
+  const v = state.vals[i];
+  const r = refs[i];
+  if (syncInput) r.input.value = v == null ? '' : String(v);
+  r.out.textContent = v == null ? '' : String(v);
+  r.dots.forEach((dot, k) => dot.classList.toggle('on', v != null && (k / (N - 1)) * 100 <= v));
+  r.track.classList.toggle('set', v != null);
+  r.marker.style.left = (v ?? 0) + '%';
+}
+
+function renderNote(i) {
+  const r = refs[i];
+  const edited = state.descs[i] !== DIMS[i].desc;
+  r.note.classList.toggle('edited', edited);
+  r.noteLabel.textContent = edited ? '我的解释' : '解释 · 可改写为你自己的';
+  r.mirror.textContent = (state.descs[i] || '') + ' ';
+}
+
+const saveBtn = document.getElementById('saveBtn');
+function renderDock() {
+  const filled = state.vals.filter(v => v != null).length;
+  const done = filled === 4;
+  document.getElementById('statusTitle').textContent = done ? '全部完成 · 可保存' : `等待填写 ${4 - filled} 个维度`;
+  document.getElementById('count').textContent = `${filled}/4`;
+  saveBtn.classList.toggle('ready', done);
+  saveBtn.setAttribute('aria-disabled', String(!done));
+}
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  state.vals = [null, null, null, null];
+  persist();
+  DIMS.forEach((_, i) => renderDim(i));
+  renderDock();
+});
+
+// Embed only the Google Fonts subsets whose unicode-range covers text on the
+// page (Noto Sans SC alone is ~18 MB in full). Fonts are cached and pre-warmed
+// so the save tap stays fast enough to keep the user-gesture activation alive
+// for navigator.share on iOS.
+const capture = document.getElementById('capture');
+const FONT_CSS_URL = document.querySelector('link[href*="fonts.googleapis.com/css2"]').href;
+let fontSheet = null;
+const fontData = new Map();
+
+function usedCodepoints() {
+  const text = capture.innerText + refs.map(r => r.ta.value + r.input.value).join('');
+  return new Set(Array.from(text, ch => ch.codePointAt(0)));
+}
+function coversAny(range, cps) {
+  if (!range) return true;
+  return range.split(',').some(part => {
+    const [a, b] = part.trim().replace(/^U\+/i, '').split('-');
+    const lo = parseInt(a.replace(/\?/g, '0'), 16);
+    const hi = b ? parseInt(b, 16) : parseInt(a.replace(/\?/g, 'F'), 16);
+    for (const cp of cps) if (cp >= lo && cp <= hi) return true;
+    return false;
+  });
+}
+function toDataURL(url) {
+  if (!fontData.has(url)) {
+    fontData.set(url, fetch(url).then(r => r.blob()).then(blob => new Promise((res, rej) => {
+      const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(blob);
+    })).catch(err => { fontData.delete(url); throw err; }));
+  }
+  return fontData.get(url);
+}
+async function getFontCSS() {
+  try {
+    if (!fontSheet) fontSheet = fetch(FONT_CSS_URL).then(r => r.text()).catch(err => { fontSheet = null; throw err; });
+    const blocks = (await fontSheet).match(/@font-face\s*{[^}]*}/g) || [];
+    const cps = usedCodepoints();
+    const out = await Promise.all(blocks.map(async block => {
+      const range = (block.match(/unicode-range:\s*([^;}]+)/) || [])[1];
+      if (!coversAny(range, cps)) return '';
+      const src = (block.match(/url\((['"]?)([^)'"]+)\1\)/) || [])[2];
+      if (!src) return '';
+      return block.replace(src, await toDataURL(src));
+    }));
+    return out.join('\n');
+  } catch (err) {
+    console.error(err);
+    return undefined;
+  }
+}
+// html-to-image's first render after page load often comes out blank, so do a
+// throwaway low-res render up front.
+let warmed = null;
+function warmUp() {
+  if (!warmed && window.htmlToImage) {
+    warmed = document.fonts.ready.then(getFontCSS)
+      .then(fontEmbedCSS => window.htmlToImage.toCanvas(capture, { pixelRatio: 0.5, fontEmbedCSS }))
+      .catch(err => { console.error(err); warmed = null; });
+  }
+  return warmed || Promise.resolve();
+}
+window.addEventListener('load', () => setTimeout(warmUp, 300));
+
+const preview = document.getElementById('preview');
+const previewImg = document.getElementById('previewImg');
+preview.addEventListener('click', () => { preview.classList.remove('open'); previewImg.removeAttribute('src'); });
+
+let saving = false;
+saveBtn.addEventListener('click', async () => {
+  if (saving || state.vals.some(v => v == null) || !window.htmlToImage) return;
+  saving = true;
+  saveBtn.classList.add('busy');
+  try {
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    await warmUp();
+    const fontEmbedCSS = await getFontCSS();
+    const opts = { pixelRatio: 2, quality: 0.95, backgroundColor: '#EDECE8', fontEmbedCSS };
+    capture.classList.add('exporting');
+    let url;
+    try { url = await window.htmlToImage.toJpeg(capture, opts); }
+    finally { capture.classList.remove('exporting'); }
+    const blob = await (await fetch(url)).blob();
+    const file = new File([blob], 'self-map.jpg', { type: 'image/jpeg' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); return; }
+      catch (err) { if (err.name === 'AbortError') return; }
+      previewImg.src = url;
+      preview.classList.add('open');
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'self-map.jpg';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch (e) {
+    console.error(e);
+  } finally {
+    saving = false;
+    saveBtn.classList.remove('busy');
+  }
+});
+
+DIMS.forEach((_, i) => { renderDim(i); renderNote(i); });
+renderDock();
+</script>
+</body>
+</html>
